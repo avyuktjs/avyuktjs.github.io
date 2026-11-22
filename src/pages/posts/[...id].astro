@@ -1,0 +1,143 @@
+---
+import { render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { SITE } from '../../config';
+import type { Post } from '../../lib/posts';
+import { formatDate, getPosts, readingTime, authorSlug } from '../../lib/posts';
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+
+  return posts.map((post) => ({
+    params: { id: post.id },
+    props: { post },
+  }));
+}
+
+interface Props {
+  post: Post;
+}
+
+const { post } = Astro.props;
+const { Content, headings } = await render(post);
+const { title, description, pubDate, updatedDate, tags, draft, author } = post.data;
+
+const authorLabel = author ?? SITE.author;
+const authorHref = `/author/${authorSlug(authorLabel)}/`;
+
+const posts = await getPosts();
+const index = posts.findIndex((entry) => entry.id === post.id);
+const newer = index > 0 ? posts[index - 1] : undefined;
+const older = index >= 0 && index < posts.length - 1 ? posts[index + 1] : undefined;
+
+const toc = headings.filter((heading) => heading.depth === 2 || heading.depth === 3);
+const showToc = toc.length >= 3;
+---
+
+<Base
+  title={title}
+  description={description}
+  article={{ publishedTime: pubDate, modifiedTime: updatedDate, tags }}
+>
+  <article class="post">
+    <div class="post-header">
+      <h1>{title}</h1>
+      <p class="post-subtitle">{description}</p>
+
+      <div class="post-byline">
+        <a class="avatar-link" href={authorHref} aria-label={`${authorLabel}'s profile`}>
+          <img
+            class="avatar"
+            src="/avatar.jpg"
+            alt={`${authorLabel}'s avatar`}
+            width="40"
+            height="40"
+          />
+        </a>
+        <div class="byline-text">
+          <a class="byline-author" href={authorHref}>{authorLabel}</a>
+          <span class="byline-meta">
+            <time datetime={pubDate.toISOString()}>{formatDate(pubDate)}</time>
+            <span aria-hidden="true"> — </span>
+            <span>{readingTime(post.body)} min read</span>
+            {
+              updatedDate && (
+                <>
+                  <span aria-hidden="true"> — </span>
+                  <span>updated {formatDate(updatedDate)}</span>
+                </>
+              )
+            }
+            {draft && <span class="badge">draft</span>}
+          </span>
+        </div>
+        <button class="share-button" type="button" id="share-button">Share</button>
+      </div>
+
+      {
+        tags.length > 0 && (
+          <ul class="tags" aria-label="Tags">
+            {tags.map((tag) => (
+              <li>{tag}</li>
+            ))}
+          </ul>
+        )
+      }
+    </div>
+
+    {
+      showToc && (
+        <nav class="toc" aria-labelledby="toc-heading">
+          <h2 class="toc-title" id="toc-heading">Contents</h2>
+          <ol>
+            {toc.map((heading) => (
+              <li class:list={[{ 'toc-sub': heading.depth === 3 }]}>
+                <a href={`#${heading.slug}`}>{heading.text}</a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+      )
+    }
+
+    <div class="prose">
+      <Content />
+    </div>
+
+    {
+      (older || newer) && (
+        <nav class="post-nav" aria-label="More posts">
+          {older && (
+            <a class="post-nav-link" href={`/posts/${older.id}/`}>
+              <span class="post-nav-label">← older</span>
+              <span class="post-nav-title">{older.data.title}</span>
+            </a>
+          )}
+          {newer && (
+            <a class="post-nav-link post-nav-next" href={`/posts/${newer.id}/`}>
+              <span class="post-nav-label">newer →</span>
+              <span class="post-nav-title">{newer.data.title}</span>
+            </a>
+          )}
+        </nav>
+      )
+    }
+  </article>
+</Base>
+
+<script>
+  const button = document.getElementById('share-button');
+  button?.addEventListener('click', async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: document.title, url: location.href });
+      } else {
+        await navigator.clipboard.writeText(location.href);
+        button.textContent = 'Copied';
+        setTimeout(() => (button.textContent = 'Share'), 2000);
+      }
+    } catch {
+      return;
+    }
+  });
+</script>

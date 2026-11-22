@@ -1,0 +1,27 @@
+---
+import type { Post } from '../lib/posts';
+import { formatDate, readingTime } from '../lib/posts';
+
+interface Props {
+  post: Post;
+}
+
+const { post } = Astro.props;
+const { title, description, pubDate, tags, draft } = post.data;
+---
+
+<article
+  class="post-card"
+  data-search={`${title} ${description} ${tags.join(' ')}`}
+>
+  <div class="post-card-meta">
+    <time datetime={pubDate.toISOString()}>{formatDate(pubDate)}</time>
+    <span aria-hidden="true">·</span>
+    <span>{readingTime(post.body)} min read</span>
+    {draft && <span class="badge">draft</span>}
+  </div>
+  <h2 class="post-card-title">
+    <a href={`/posts/${post.id}/`}>{title}</a>
+  </h2>
+  <p class="post-card-description">{description}</p>
+</article>

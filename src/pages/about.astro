@@ -1,0 +1,24 @@
+---
+import Base from '../layouts/Base.astro';
+import { SITE } from '../config';
+---
+
+<Base title="About" description={`About ${SITE.author}.`}>
+  <article class="page">
+    <header class="page-header">
+      <h1>About</h1>
+    </header>
+
+    <div class="prose">
+      <p>hi, i'm avyukt. i mess around with software and hardware, mostly security stuff, and write about whatever I got stuck on.</p>
+      <p>this is just a place to keep my notes somewhere i can find them again. no newsletter, no comments, no tracking.</p>
+
+      <h2>find me</h2>
+      <ul>
+        {SITE.github && <li><a href={SITE.github}>GitHub</a></li>}
+        {SITE.email && <li><a href={`mailto:${SITE.email}`}>Email</a></li>}
+        <li><a href="/rss.xml">RSS</a></li>
+      </ul>
+    </div>
+  </article>
+</Base>

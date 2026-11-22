@@ -1,0 +1,142 @@
+---
+import type { Post } from '../lib/posts';
+
+interface Props {
+  posts: Post[];
+}
+
+const { posts } = Astro.props;
+const items = posts.map((post) => ({
+  title: post.data.title,
+  description: post.data.description,
+  href: `/posts/${post.id}/`,
+  search: `${post.data.title} ${post.data.description} ${post.data.tags.join(' ')}`.toLowerCase(),
+}));
+---
+
+<div class="search-overlay" id="search-dialog" hidden>
+  <div class="search-backdrop" data-close-search></div>
+  <div class="search-dialog" role="dialog" aria-modal="true" aria-label="Search posts">
+    <div class="search-field">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.5-3.5" />
+      </svg>
+      <input
+        id="search-input"
+        type="search"
+        placeholder="Search posts, tags and authors"
+        aria-label="Search posts"
+        autocomplete="off"
+      />
+      <kbd>ESC</kbd>
+    </div>
+    <div class="search-results" id="search-results"></div>
+    <div class="search-hint">
+      <span><kbd>↑</kbd><kbd>↓</kbd> to navigate</span>
+      <span><kbd>↵</kbd> to open</span>
+    </div>
+  </div>
+</div>
+
+<script define:vars={{ items }}>
+  const overlay = document.getElementById('search-dialog');
+  const input = document.getElementById('search-input');
+  const results = document.getElementById('search-results');
+  let visible = [];
+  let selected = 0;
+
+  function render(query) {
+    results.replaceChildren();
+    visible = [];
+    selected = 0;
+
+    const term = query.trim().toLowerCase();
+
+    if (!term) {
+      const hint = document.createElement('p');
+      hint.className = 'search-empty';
+      hint.textContent = 'Type to search posts...';
+      results.appendChild(hint);
+      return;
+    }
+
+    visible = items.filter((item) => item.search.includes(term));
+
+    if (visible.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'search-empty';
+      empty.textContent = 'No posts found.';
+      results.appendChild(empty);
+      return;
+    }
+
+    visible.forEach((item, index) => {
+      const link = document.createElement('a');
+      link.className = 'search-result' + (index === selected ? ' is-selected' : '');
+      link.href = item.href;
+
+      const title = document.createElement('span');
+      title.className = 'search-result-title';
+      title.textContent = item.title;
+
+      const description = document.createElement('span');
+      description.className = 'search-result-desc';
+      description.textContent = item.description;
+
+      link.append(title, description);
+      results.appendChild(link);
+    });
+  }
+
+  function move(delta) {
+    if (!visible.length) return;
+    const rows = results.querySelectorAll('.search-result');
+    rows[selected]?.classList.remove('is-selected');
+    selected = (selected + delta + rows.length) % rows.length;
+    rows[selected]?.classList.add('is-selected');
+    rows[selected]?.scrollIntoView({ block: 'nearest' });
+  }
+
+  function open() {
+    if (!overlay.hidden) return;
+    overlay.hidden = false;
+    input.value = '';
+    render('');
+    input.focus();
+    document.body.style.overflow = 'hidden';
+  }
+
+  function close() {
+    if (overlay.hidden) return;
+    overlay.hidden = true;
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('[data-open-search]')) open();
+    if (event.target.closest('[data-close-search]')) close();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (
+      event.key === '/' &&
+      overlay.hidden &&
+      !/^(INPUT|TEXTAREA)$/i.test(document.activeElement?.tagName ?? '')
+    ) {
+      event.preventDefault();
+      open();
+    }
+
+    if (overlay.hidden) return;
+
+    if (event.key === 'Escape') close();
+    if (event.key === 'ArrowDown') { event.preventDefault(); move(1); }
+    if (event.key === 'ArrowUp') { event.preventDefault(); move(-1); }
+    if (event.key === 'Enter' && visible[selected]) {
+      location.href = visible[selected].href;
+    }
+  });
+
+  input.addEventListener('input', () => render(input.value.trim()));
+</script>

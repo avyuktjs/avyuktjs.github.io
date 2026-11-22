@@ -1,0 +1,64 @@
+---
+import Base from '../../layouts/Base.astro';
+import type { Post } from '../../lib/posts';
+import { authorName, authorSlug, formatDate, getPosts } from '../../lib/posts';
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+  const groups = new Map<string, { name: string; posts: Post[] }>();
+
+  for (const post of posts) {
+    const name = authorName(post);
+    const slug = authorSlug(name);
+    const group = groups.get(slug) ?? { name, posts: [] };
+    group.posts.push(post);
+    groups.set(slug, group);
+  }
+
+  return Array.from(groups, ([slug, group]) => ({
+    params: { name: slug },
+    props: group,
+  }));
+}
+
+interface Props {
+  name: string;
+  posts: Post[];
+}
+
+const { name, posts } = Astro.props;
+---
+
+<Base title={name} description={`Posts written by ${name}.`}>
+  <article class="author-page">
+    <header class="author-header">
+      <img
+        class="author-avatar"
+        src="/avatar.jpg"
+        alt={`${name}'s avatar`}
+        width="112"
+        height="112"
+      />
+      <h1>{name}</h1>
+    </header>
+
+    <div class="author-divider"></div>
+
+    <section class="author-posts" aria-labelledby="author-posts-heading">
+      <h2 class="section-label" id="author-posts-heading">Posts</h2>
+      {
+        posts.map((post) => (
+          <article class="author-post">
+            <h3>
+              <a href={`/posts/${post.id}/`}>{post.data.title}</a>
+            </h3>
+            <p>{post.data.description}</p>
+            <p class="author-post-meta">
+              By {name} — {formatDate(post.data.pubDate)}
+            </p>
+          </article>
+        ))
+      }
+    </section>
+  </article>
+</Base>

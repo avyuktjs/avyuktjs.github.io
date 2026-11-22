@@ -1,0 +1,17 @@
+---
+import { SITE } from '../config';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <p class="footer-inner">
+    <span>© {year} {SITE.author}</span>
+    <span class="footer-links">
+      {SITE.email && <a href={`mailto:${SITE.email}`}>email</a>}
+      {SITE.github && <a href={SITE.github}>github</a>}
+      <a href="/rss.xml">rss</a>
+      <a href="https://astro.build">astro</a>
+    </span>
+  </p>
+</footer>
